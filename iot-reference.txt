@@ -1,0 +1,8 @@
+1.  https://youtu.be/9dxEdDDb_gE
+2.  https://youtu.be/5SvRolROPxA
+
+https://www.teachmemicro.com/display-sensor-data-nodemcu-web-server/
+https://www.teachmemicro.com/simple-nodemcu-web-server/
+https://www.teachmemicro.com/simple-nodemcu-web-server/
+
+https://www.instructables.com/id/Simple-Led-Control-With-Blynk-and-NodeMCU-Esp8266-/
