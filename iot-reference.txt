@@ -6,3 +6,19 @@ https://www.teachmemicro.com/simple-nodemcu-web-server/
 https://www.teachmemicro.com/simple-nodemcu-web-server/
 
 https://www.instructables.com/id/Simple-Led-Control-With-Blynk-and-NodeMCU-Esp8266-/
+
+https://randomnerdtutorials.com/esp8266-dht11dht22-temperature-and-humidity-web-server-with-arduino-ide/
+
+https://www.instructables.com/id/Interface-PIR-Sensor-With-NodeMCU/
+
+https://www.instructables.com/id/ESP8266-Soil-Moisture-Sensor-With-Arduino-IDE/
+
+https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/server-examples.html
+https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WiFi/examples/WiFiClient/WiFiClient.ino
+https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/readme.html
+
+https://techtutorialsx.com/2016/10/22/esp8266-webserver-getting-query-parameters/
+
+https://techtutorialsx.com/2016/10/15/esp8266-http-server-serving-html-javascript-and-css/
+
+https://learn.adafruit.com/mqtt-adafruit-io-and-you/intro-to-adafruit-mqtt
