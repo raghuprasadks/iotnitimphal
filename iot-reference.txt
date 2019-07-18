@@ -22,3 +22,5 @@ https://techtutorialsx.com/2016/10/22/esp8266-webserver-getting-query-parameters
 https://techtutorialsx.com/2016/10/15/esp8266-http-server-serving-html-javascript-and-css/
 
 https://learn.adafruit.com/mqtt-adafruit-io-and-you/intro-to-adafruit-mqtt
+https://learn.adafruit.com/desktop-mqtt-client-for-adafruit-io/installing-software
+https://raw.githubusercontent.com/titusece/ESP8266_Adafruit_MQTT_DHT11/master/ESP8266_Adafruit_DHT11_MQTT.ino

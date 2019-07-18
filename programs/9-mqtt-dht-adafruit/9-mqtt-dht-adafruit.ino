@@ -15,14 +15,37 @@
   Written by Tony DiCola for Adafruit Industries.
   MIT license, all text above must be included in any redistribution
  ****************************************************/
+ 
 #include <ESP8266WiFi.h>
 #include "Adafruit_MQTT.h"
 #include "Adafruit_MQTT_Client.h"
 
-// the on off button feed turns this LED on/off
-#define LED 2  
-// the slider feed sets the PWM output of this pin
-#define PWMOUT 12
+
+#include "DHT.h"
+
+#define DHTPIN 12 // what digital pin we're connected to NodeMCU (D6)
+
+// Uncomment whatever type you're using!
+#define DHTTYPE DHT11 // DHT 11
+
+//#define DHTTYPE DHT22 // DHT 22 (AM2302), AM2321
+//#define DHTTYPE DHT21 // DHT 21 (AM2301)
+// Connect pin 1 (on the left) of the sensor to +5V
+// NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
+// to 3.3V instead of 5V!
+// Connect pin 2 of the sensor to whatever your DHTPIN is
+// Connect pin 4 (on the right) of the sensor to GROUND
+// Connect a 10K resistor from pin 2 (data) to pin 1 (power) of the sensor
+// Initialize DHT sensor.
+// Note that older versions of this library took an optional third parameter to
+// tweak the timings for faster processors. This parameter is no longer needed
+// as the current DHT reading algorithm adjusts itself to work on faster procs.
+
+
+DHT dht(DHTPIN, DHTTYPE);
+
+char str_hum[16];
+char str_temp[16];
 
 /************************* WiFi Access Point *********************************/
 
@@ -34,7 +57,7 @@
 #define AIO_SERVER      "io.adafruit.com"
 #define AIO_SERVERPORT  1883                   // use 8883 for SSL
 #define AIO_USERNAME    "kaushalya"
-#define AIO_KEY         "a3940d2cf4e542e2adcbb92d00e5f70d"
+#define AIO_KEY         "a564f7a09855405da1508caf98010dcd"
 
 /************ Global State (you don't need to change this!) ******************/
 
@@ -44,13 +67,14 @@ WiFiClient client;
 //WiFiClientSecure client;
 
 // Setup the MQTT client class by passing in the WiFi client and MQTT server and login details.
-Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_USERNAME, AIO_KEY);
+Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_KEY);
 
 /****************************** Feeds ***************************************/
 
 // Notice MQTT paths for AIO follow the form: <username>/feeds/<feedname>
-Adafruit_MQTT_Subscribe onoffbutton = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/onoff");
-Adafruit_MQTT_Subscribe slider = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/slider");
+Adafruit_MQTT_Publish temp = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/temp");
+Adafruit_MQTT_Publish hum = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/hum");
+
 
 /*************************** Sketch Code ************************************/
 
@@ -59,11 +83,9 @@ Adafruit_MQTT_Subscribe slider = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/f
 void MQTT_connect();
 
 void setup() {
-  pinMode(LED, OUTPUT);
-  pinMode(PWMOUT, OUTPUT);
-
   Serial.begin(115200);
   delay(10);
+  dht.begin();
 
   Serial.println(F("Adafruit MQTT demo"));
 
@@ -81,13 +103,8 @@ void setup() {
 
   Serial.println("WiFi connected");
   Serial.println("IP address: "); Serial.println(WiFi.localIP());
-
-  // Setup MQTT subscription for onoff & slider feed.
-  mqtt.subscribe(&onoffbutton);
-  mqtt.subscribe(&slider);
 }
 
-uint32_t x=0;
 
 void loop() {
   // Ensure the connection to the MQTT server is alive (this will make the first
@@ -95,38 +112,83 @@ void loop() {
   // function definition further below.
   MQTT_connect();
 
-  // this is our 'wait for incoming subscription packets' busy subloop
-  // try to spend your time here
 
-  Adafruit_MQTT_Subscribe *subscription;
-  while ((subscription = mqtt.readSubscription(5000))) {
-    // Check if its the onoff button feed
-    if (subscription == &onoffbutton) {
-      Serial.print(F("On-Off button: "));
-      Serial.println((char *)onoffbutton.lastread);
+  
+      // Wait a few seconds between measurements.
+      delay(2000);
       
-      if (strcmp((char *)onoffbutton.lastread, "ON") == 0) {
-        digitalWrite(LED, LOW); 
+      // Reading temperature or humidity takes about 250 milliseconds!
+      // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+      float h = dht.readHumidity();
+      // Read temperature as Celsius (the default)
+      float t = dht.readTemperature();
+      // Read temperature as Fahrenheit (isFahrenheit = true)
+      float f = dht.readTemperature(true);
+      
+      // Check if any reads failed and exit early (to try again).
+      if (isnan(h) || isnan(t) || isnan(f)) {
+      Serial.println("Failed to read from DHT sensor!");
+      return;
       }
-      if (strcmp((char *)onoffbutton.lastread, "OFF") == 0) {
-        digitalWrite(LED, HIGH); 
-      }
-    }
-    
-    // check if its the slider feed
-    if (subscription == &slider) {
-      Serial.print(F("Slider: "));
-      Serial.println((char *)slider.lastread);
-      uint16_t sliderval = atoi((char *)slider.lastread);  // convert to a number
-      analogWrite(PWMOUT, sliderval);
-    }
+      
+      // Compute heat index in Fahrenheit (the default)
+      float hif = dht.computeHeatIndex(f, h);
+      // Compute heat index in Celsius (isFahreheit = false)
+      float hic = dht.computeHeatIndex(t, h, false);
+      Serial.print("Humidity: ");
+      Serial.print(h);
+      Serial.print(" %\t");
+      Serial.print("Temperature: ");
+      Serial.print(t);
+      Serial.print(" *C ");
+      Serial.print(f);
+      Serial.print(" *F\t");
+      Serial.print("Heat index: ");
+      Serial.print(hic);
+      Serial.print(" *C ");
+      Serial.print(hif);
+      Serial.println(" *F");
+
+
+      Serial.print("Temperature in Celsius:");
+      Serial.println(String(t).c_str());
+
+      Serial.print("Temperature in Fahrenheit:");
+      Serial.println(String(f).c_str());
+
+      Serial.print("Humidity:");
+      Serial.println(String(h).c_str());
+      
+
+    //dtostrf(gps_latitude, 4, 2, str_temp);
+    //dtostrf(gps_longitude, 4, 2, str_hum);
+
+  // Now we can publish stuff!
+  Serial.print(F("\nSending Humidity value: "));
+  Serial.print(String(h).c_str());
+  Serial.print("...");
+  if (! hum.publish(String(h).c_str())) {
+    Serial.println(F("Failed"));
+  } else {
+    Serial.println(F("OK!"));
+  }
+
+  Serial.print(F("\nSending Temperature value: "));
+  Serial.print(String(t).c_str());
+  Serial.print("...");
+  if (! temp.publish(String(t).c_str())) {
+    Serial.println(F("Failed"));
+  } else {
+    Serial.println(F("OK!"));
   }
 
   // ping the server to keep the mqtt connection alive
+  // NOT required if you are publishing once every KEEPALIVE seconds
+  /*
   if(! mqtt.ping()) {
     mqtt.disconnect();
   }
-
+  */
 }
 
 // Function to connect and reconnect as necessary to the MQTT server.

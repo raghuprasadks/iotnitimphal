@@ -1,20 +1,3 @@
-/***************************************************
-  Adafruit MQTT Library ESP8266 Example
-
-  Must use ESP8266 Arduino from:
-    https://github.com/esp8266/Arduino
-
-  Works great with Adafruit's Huzzah ESP board & Feather
-  ----> https://www.adafruit.com/product/2471
-  ----> https://www.adafruit.com/products/2821
-
-  Adafruit invests time and resources providing this open source code,
-  please support Adafruit and open-source hardware by purchasing
-  products from Adafruit!
-
-  Written by Tony DiCola for Adafruit Industries.
-  MIT license, all text above must be included in any redistribution
- ****************************************************/
 #include <ESP8266WiFi.h>
 #include "Adafruit_MQTT.h"
 #include "Adafruit_MQTT_Client.h"
@@ -29,7 +12,7 @@
 #define AIO_SERVER      "io.adafruit.com"
 #define AIO_SERVERPORT  1883                   // use 8883 for SSL
 #define AIO_USERNAME    "kaushalya"
-#define AIO_KEY         "a3940d2cf4e542e2adcbb92d00e5f70d"
+#define AIO_KEY         "a564f7a09855405da1508caf98010dcd"
 
 /************ Global State (you don't need to change this!) ******************/
 
@@ -39,17 +22,29 @@ WiFiClient client;
 //WiFiClientSecure client;
 
 // Setup the MQTT client class by passing in the WiFi client and MQTT server and login details.
-Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_KEY);
+Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_USERNAME, AIO_KEY);
 
 /****************************** Feeds ***************************************/
 
+
+
+
+// QOS
+//Adafruit_MQTT_Publish photocell = Adafruit_MQTT_Publish(&mqtt, PHOTOCELL_FEED, MQTT_QOS_1);
+
+// Last Will
+
+// Adjust as necessary, in seconds.  Default to 5 minutes.
+#define MQTT_CONN_KEEPALIVE 300
+/****************************** Feeds ***************************************/
 // Setup a feed called 'photocell' for publishing.
 // Notice MQTT paths for AIO follow the form: <username>/feeds/<feedname>
-Adafruit_MQTT_Publish photocell = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/photocell");
+const char PHOTOCELL_FEED[] PROGMEM = AIO_USERNAME "/feeds/photocell";
+Adafruit_MQTT_Publish photocell = Adafruit_MQTT_Publish(&mqtt, PHOTOCELL_FEED, MQTT_QOS_1);
 
-// Setup a feed called 'onoff' for subscribing to changes.
-Adafruit_MQTT_Subscribe onoffbutton = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/onoff");
-
+// Define a will
+const char WILL_FEED[] PROGMEM = AIO_USERNAME "/feeds/onoff";
+Adafruit_MQTT_Publish lastwill = Adafruit_MQTT_Publish(&mqtt, WILL_FEED, MQTT_QOS_1);
 /*************************** Sketch Code ************************************/
 
 // Bug workaround for Arduino 1.6.6, it seems to need a function declaration
@@ -60,7 +55,7 @@ void setup() {
   Serial.begin(115200);
   delay(10);
 
-  Serial.println(F("Adafruit MQTT demo"));
+  Serial.println(F("Adafruit MQTT with Will demo"));
 
   // Connect to WiFi access point.
   Serial.println(); Serial.println();
@@ -77,8 +72,8 @@ void setup() {
   Serial.println("WiFi connected");
   Serial.println("IP address: "); Serial.println(WiFi.localIP());
 
-  // Setup MQTT subscription for onoff feed.
-  mqtt.subscribe(&onoffbutton);
+  // Setup MQTT will to set on/off to "OFF" when we disconnect
+  mqtt.will(WILL_FEED, "OFF"); 
 }
 
 uint32_t x=0;
@@ -88,17 +83,8 @@ void loop() {
   // connection and automatically reconnect when disconnected).  See the MQTT_connect
   // function definition further below.
   MQTT_connect();
-
-  // this is our 'wait for incoming subscription packets' busy subloop
-  // try to spend your time here
-
-  Adafruit_MQTT_Subscribe *subscription;
-  while ((subscription = mqtt.readSubscription(5000))) {
-    if (subscription == &onoffbutton) {
-      Serial.print(F("Got: "));
-      Serial.println((char *)onoffbutton.lastread);
-    }
-  }
+  
+  lastwill.publish("ON");  // make sure we publish ON first thing after connecting
 
   // Now we can publish stuff!
   Serial.print(F("\nSending photocell val "));
@@ -109,14 +95,8 @@ void loop() {
   } else {
     Serial.println(F("OK!"));
   }
-
-  // ping the server to keep the mqtt connection alive
-  // NOT required if you are publishing once every KEEPALIVE seconds
-  /*
-  if(! mqtt.ping()) {
-    mqtt.disconnect();
-  }
-  */
+  
+  delay(5000);
 }
 
 // Function to connect and reconnect as necessary to the MQTT server.
